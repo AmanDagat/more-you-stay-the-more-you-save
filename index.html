@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AmanDagat Pricing Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        input {
+            width: 50px;
+            text-align: center;
+        }
+        button {
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            text-align: left;
+        }
+        .output h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .output p {
+            font-size: 1.2em;
+            margin: 5px 0;
+        }
+        .output .price {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        .output .savings {
+            color: green;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="logo.png" alt="AmanDagat Logo" class="logo">
+        <h1>AmanDagat Pricing Tool</h1>
+        <label for="guestCount">Number of Guests:</label>
+        <input type="number" id="guestCount" min="1" max="45" placeholder="Guests">
+        <label for="nights">Number of Nights:</label>
+        <input type="number" id="nights" min="1" value="1" placeholder="Nights">
+        <button onclick="allocateVillas()">Calculate Pricing</button>
+        <div id="output" class="output"></div>
+    </div>
+
+    <script>
+        function allocateVillas() {
+            const guestCount = parseInt(document.getElementById("guestCount").value);
+            const nights = parseInt(document.getElementById("nights").value);
+
+            if (isNaN(guestCount) || guestCount <= 0 || guestCount > 45) {
+                document.getElementById("output").innerHTML = "<p>Please enter a valid number of guests (1-45).</p>";
+                return;
+            }
+            if (isNaN(nights) || nights <= 0) {
+                document.getElementById("output").innerHTML = "<p>Please enter a valid number of nights.</p>";
+                return;
+            }
+
+            const prices = {
+                1: 4985,
+                2: 4985,
+                3: 6500,
+                4: 8100,
+                5: 9600,
+                6: 10550,
+                7: {
+                    "6-Guest Villa with Extra Bed": 11450,
+                    "8-Guest Villa": 11700
+                },
+                8: 12900,
+                9: {
+                    "1 x 8-Guest Villa with Extra Bed": 13800,
+                    "1 x 6-Guest Villa and 1 x 6-Guest Villa (3 Guests)": 6500 + 10550
+                }
+            };
+
+            const max6GuestVillas = 6;
+            const max8GuestVillas = 2;
+
+            let allocationOptions = [];
+            let minEmptyBeds = Infinity;
+
+            if (guestCount === 7) {
+                allocationOptions.push({
+                    allocation: ["1 x 6-Guest Villa with Extra Bed"],
+                    price: prices[7]["6-Guest Villa with Extra Bed"]
+                });
+                allocationOptions.push({
+                    allocation: ["1 x 8-Guest Villa (7 Guests)"],
+                    price: prices[7]["8-Guest Villa"]
+                });
+            } else if (guestCount === 9) {
+                allocationOptions.push({
+                    allocation: ["1 x 8-Guest Villa with Extra Bed"],
+                    price: prices[9]["1 x 8-Guest Villa with Extra Bed"]
+                });
+                allocationOptions.push({
+                    allocation: [
+                        "1 x 6-Guest Villa",
+                        "1 x 6-Guest Villa (3 Guests)"
+                    ],
+                    price: prices[9]["1 x 6-Guest Villa and 1 x 6-Guest Villa (3 Guests)"]
+                });
+            } else {
+                for (let num6 = 0; num6 <= max6GuestVillas; num6++) {
+                    for (let num8 = 0; num8 <= max8GuestVillas; num8++) {
+                        const totalCapacity = num6 * 6 + num8 * 8;
+                        if (totalCapacity >= guestCount) {
+                            const emptyBeds = totalCapacity - guestCount;
+                            let totalPrice = 0;
+                            let allocation = [];
+                            let remainingGuests = guestCount;
+
+                            for (let i = 0; i < num8; i++) {
+                                if (remainingGuests >= 8) {
+                                    allocation.push("1 x 8-Guest Villa");
+                                    totalPrice += prices[8];
+                                    remainingGuests -= 8;
+                                } else if (remainingGuests > 0) {
+                                    allocation.push("1 x 8-Guest Villa with Extra Bed");
+                                    totalPrice += prices[9]["1 x 8-Guest Villa with Extra Bed"];
+                                    remainingGuests = 0;
+                                }
+                            }
+
+                            for (let i = 0; i < num6; i++) {
+                                if (remainingGuests >= 6) {
+                                    allocation.push("1 x 6-Guest Villa");
+                                    totalPrice += prices[6];
+                                    remainingGuests -= 6;
+                                } else if (remainingGuests > 0) {
+                                    allocation.push(`1 x 6-Guest Villa (${remainingGuests} Guests)`);
+                                    totalPrice += prices[remainingGuests];
+                                    remainingGuests = 0;
+                                }
+                            }
+
+                            if (emptyBeds < minEmptyBeds) {
+                                minEmptyBeds = emptyBeds;
+                                allocationOptions = [{ allocation, price: totalPrice }];
+                            } else if (emptyBeds === minEmptyBeds) {
+                                allocationOptions.push({ allocation, price: totalPrice });
+                            }
+                        }
+                    }
+                }
+            }
+
+            allocationOptions.forEach(option => {
+                let basePrice = option.price;
+                let totalPrice = basePrice;
+
+                if (nights >= 2) {
+                    totalPrice += basePrice * 0.7; // 30% discount for the second night
+                    if (nights > 2) {
+                        totalPrice += basePrice * 0.5 * (nights - 2); // 50% discount for third night onward
+                    }
+                }
+
+                option.totalPrice = totalPrice;
+                option.savings = basePrice * nights - totalPrice;
+            });
+
+            const output = document.getElementById("output");
+            if (allocationOptions.length > 0) {
+                let resultHTML = `<h2>Best Allocation for ${guestCount} Guests for ${nights} Night(s)</h2>`;
+                allocationOptions.forEach((option, index) => {
+                    resultHTML += `
+                        <p><strong>Option ${index + 1}:</strong></p>
+                        <ul>
+                            ${option.allocation.map((villa) => `<li>${villa}</li>`).join("")}
+                        </ul>
+                        <p class="price">Total Price: PHP ${option.totalPrice.toLocaleString()}</p>
+                        <p class="savings">You saved: PHP ${option.savings.toLocaleString()}</p>
+                        <hr>
+                    `;
+                });
+                output.innerHTML = resultHTML;
+            } else {
+                output.innerHTML = "<p>No valid allocations found.</p>";
+            }
+        }
+    </script>
+</body>
+</html>
